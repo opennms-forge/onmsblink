@@ -30,4 +30,5 @@ Option            | Description   | Default
 --delay <seconds> | poll delay    | 10000
 --username <text> | username      | admin
 --password <text> | password      | admin
+--help            | display help and exit | false
 --test            | test and exit | false
