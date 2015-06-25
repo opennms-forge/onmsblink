@@ -3,3 +3,5 @@
 *.ipr
 target/
 .DS_Store
+blink1/blink1.jar
+blink1/libBlink1.jnilib

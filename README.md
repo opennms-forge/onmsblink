@@ -19,14 +19,15 @@ Now build _OnmsBlink_:
     
 Run the tool by invoking `onmsblink.sh`:
 
-    # ./onmsblink.sh [options] baseUrl
+    # ./onmsblink.sh --help
 
-The argument `baseUrl` is used to point to the OpenNMS installation. If the argument is not given the default `http://localhost:8980/opennms` will be used. The following options are available:
+The following options are available:
     
 
-Option             | Description   | Default
------------------- | --------------|--------
- --delay <seconds> | poll delay    | 10000
- --password <text> | password      | admin
- --test            | test and exit | false
- --username <text> | username      | admin
+Option            | Description   | Default
+------------------|---------------|--------
+--url             | OpenNMS url   | http://localhost:8980/opennms
+--delay <seconds> | poll delay    | 10000
+--username <text> | username      | admin
+--password <text> | password      | admin
+--test            | test and exit | false
