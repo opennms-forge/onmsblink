@@ -10,8 +10,6 @@ import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsSeverity;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import thingm.blink1.Blink1;
 
 import java.awt.*;
