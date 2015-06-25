@@ -114,26 +114,30 @@ public class OnmsBlink {
             System.exit(0);
         }
 
+        final Blink1 blink1 = Blink1.open();
+
+        if (blink1.getCount() == 0) {
+            System.err.println("Sorry, no devices found!");
+            System.exit(-1);
+        }
+
+        /**
+         * add exit hook for shutting down the blink1
+         */
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                blink1.fadeToRGB(0, Color.BLACK);
+                blink1.close();
+            }
+        }));
+
         /**
          * Create a thread for cycling through the colors
          */
         Thread thread = new Thread(new Runnable() {
-
             @Override
             public void run() {
-                Blink1 blink1 = Blink1.open();
-
-                /**
-                 * add exit hook for shutting down the blink1
-                 */
-                Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        blink1.fadeToRGB(0, Color.BLACK);
-                        blink1.close();
-                    }
-                }));
-
                 while (true) {
                     if (maxSeverity.getId() <= 3) {
                         blink1.fadeToRGB(0, colorMap.get(maxSeverity));
