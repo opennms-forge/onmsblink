@@ -32,3 +32,4 @@ Option            | Description   | Default
 --password <text> | password      | admin
 --help            | display help and exit | false
 --test            | test and exit | false
+--quiet           | no output except errors     | false

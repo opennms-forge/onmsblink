@@ -46,10 +46,8 @@ public class OnmsBlink {
     @Option(name = "--help", usage = "display help and exit")
     private boolean help = false;
 
-    /**
-     * Logger
-     */
-    private static Logger LOG = LoggerFactory.getLogger(OnmsBlink.class);
+    @Option(name = "--quiet", usage = "no output when polling, only errors")
+    private boolean quiet = false;
 
     /**
      * The maximum severity of the requested alarms
@@ -180,7 +178,9 @@ public class OnmsBlink {
             for (int i = 3; i < 8; i++) {
                 maxSeverity = OnmsSeverity.get(i);
 
-                System.out.println("Setting LED to severity " + maxSeverity.getLabel());
+                if (!quiet) {
+                    System.out.println("Setting LED to severity " + maxSeverity.getLabel());
+                }
 
                 try {
                     Thread.sleep(5000);
@@ -219,10 +219,12 @@ public class OnmsBlink {
 
                 maxSeverity = OnmsSeverity.get(maxSeverityId);
 
-                System.out.println("Received " + onmsAlarms.size() + " unacknowledged alarm(s), maximum severity is " + maxSeverity.getLabel());
+                if (!quiet) {
+                    System.out.println("Received " + onmsAlarms.size() + " unacknowledged alarm(s), maximum severity is " + maxSeverity.getLabel());
+                }
 
             } catch (Exception ex) {
-                LOG.debug("Error executing rest request", ex);
+                ex.printStackTrace(System.err);
             }
 
             try {
