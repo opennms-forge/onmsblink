@@ -18,8 +18,16 @@ import java.awt.*;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * onmsblink - a small tool for indicating unacknowledged alarms on your blink1/mk2 USB led.
+ *
+ * @author Christian Pape
+ */
 public class OnmsBlink {
 
+    /**
+     * Command line options
+     */
     @Option(required = false, name = "--url", usage = "URL of your OpenNMS installation")
     private String baseUrl = "http://localhost:8980/opennms";
 
@@ -38,10 +46,19 @@ public class OnmsBlink {
     @Option(name = "--help", usage = "display help and exit")
     private boolean help = false;
 
+    /**
+     * Logger
+     */
     private static Logger LOG = LoggerFactory.getLogger(OnmsBlink.class);
 
+    /**
+     * The maximum severity of the requested alarms
+     */
     private OnmsSeverity maxSeverity = OnmsSeverity.NORMAL;
 
+    /**
+     * Map for mapping severities to colors
+     */
     private HashMap<OnmsSeverity, Color> colorMap = new HashMap<>();
 
     {
@@ -54,17 +71,36 @@ public class OnmsBlink {
         colorMap.put(OnmsSeverity.CRITICAL, new Color(0xFF0000));
     }
 
+    /**
+     * Main Method
+     *
+     * @param args command line parameters
+     */
     public static void main(String[] args) {
         new OnmsBlink(args);
     }
 
+    /**
+     * Displays the usage help message.
+     *
+     * @param cmdLineParser the parser instance to be used
+     */
     private void displayHelp(CmdLineParser cmdLineParser) {
         System.err.println("onmsblink - a small tool to indicate OpenNMS alarms on a blink1/mk2 USB led\n");
         cmdLineParser.printUsage(System.err);
     }
 
+    /**
+     * Constructor for instantiating new objects of this class.
+     *
+     * @param args the command line parameters to parse
+     */
     public OnmsBlink(String[] args) {
+        /**
+         * Parse the arguments
+         */
         final CmdLineParser cmdLineParser = new CmdLineParser(this);
+
         try {
             cmdLineParser.parseArgument(args);
         } catch (final CmdLineException e) {
@@ -74,17 +110,26 @@ public class OnmsBlink {
             System.exit(-1);
         }
 
+        /**
+         * Display help message if "--help" was used
+         */
         if (help) {
             displayHelp(cmdLineParser);
             System.exit(0);
         }
 
+        /**
+         * Create a thread for cycling through the colors
+         */
         Thread thread = new Thread(new Runnable() {
 
             @Override
             public void run() {
                 Blink1 blink1 = Blink1.open();
 
+                /**
+                 * add exit hook for shutting down the blink1
+                 */
                 Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -127,17 +172,38 @@ public class OnmsBlink {
 
         thread.start();
 
+        /**
+         * if "--test" is given cycle through the severities and exit
+         */
         if (test) {
-            test();
+
+            for (int i = 3; i < 8; i++) {
+                maxSeverity = OnmsSeverity.get(i);
+
+                System.out.println("Setting LED to severity " + maxSeverity.getLabel());
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
             System.exit(0);
         }
 
+        /**
+         * Initialize the rest stuff
+         */
         DefaultApacheHttpClientConfig defaultApacheHttpClientConfig = new DefaultApacheHttpClientConfig();
         defaultApacheHttpClientConfig.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
         defaultApacheHttpClientConfig.getProperties().put(defaultApacheHttpClientConfig.PROPERTY_PREEMPTIVE_AUTHENTICATION, Boolean.TRUE);
         defaultApacheHttpClientConfig.getState().setCredentials(null, null, -1, username, password);
         ApacheHttpClient apacheHttpClient = ApacheHttpClient.create(defaultApacheHttpClientConfig);
 
+        /**
+         * Loop for requesting the alarms and setting the maxSeverity field.
+         */
         while (true) {
             WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?limit=0&alarmAckTime=null");
 
@@ -161,20 +227,6 @@ public class OnmsBlink {
 
             try {
                 Thread.sleep(delay * 1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    public void test() {
-        for (int i = 3; i < 8; i++) {
-            maxSeverity = OnmsSeverity.get(i);
-
-            System.out.println("Setting LED to severity " + maxSeverity.getLabel());
-
-            try {
-                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
