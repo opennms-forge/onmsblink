@@ -36,6 +36,11 @@ public class OnmsBlink {
         private OnmsSeverity maxSeverity = OnmsSeverity.NORMAL;
 
         /**
+         * constant glow
+         */
+        private boolean constant = false;
+
+        /**
          * Map for mapping severities to colors
          */
         private HashMap<OnmsSeverity, Color> colorMap = new HashMap<>();
@@ -79,10 +84,18 @@ public class OnmsBlink {
             this.maxSeverity = maxSeverity;
         }
 
+        public boolean isConstantGlow() {
+            return constant;
+        }
+
+        public void setConstantGlow(boolean constant) {
+            this.constant = constant;
+        }
+
         @Override
         public void run() {
             while (true) {
-                if (maxSeverity.getId() <= 3) {
+                if (maxSeverity.getId() <= 3 || isConstantGlow()) {
                     blink1.fadeToRGB(0, colorMap.get(maxSeverity));
 
                     try {
@@ -130,6 +143,9 @@ public class OnmsBlink {
 
     @Option(name = "--test", usage = "test and exit")
     private boolean test = false;
+
+    @Option(name = "--constant", usage = "constant glow, no flashing")
+    public boolean constant = false;
 
     @Option(name = "--help", usage = "display help and exit")
     private boolean help = false;
@@ -198,6 +214,7 @@ public class OnmsBlink {
          * Create a thread for cycling through the colors
          */
         final OnmsBlinkWorker onmsBlinkWorker = new OnmsBlinkWorker();
+        onmsBlinkWorker.setConstantGlow(constant);
         final Thread thread = new Thread(onmsBlinkWorker);
         thread.start();
 
