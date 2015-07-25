@@ -24,6 +24,7 @@ cd onmsblink
 .Get the blink1 SDK to build the `blink1.jar` and `libBlink1.jnilib`
 [source, bash]
 ----
+git submodule init
 git submodule update
 ----
 
