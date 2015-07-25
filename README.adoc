@@ -1,0 +1,78 @@
+
+= onmsblink
+
+A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_.
+
+In order to compile or execute this tool you need to build the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
+
+== Requirements
+
+* link:http://www.oracle.com/technetwork/java/javase/downloads/index.html[Oracle Java 8 JDK] with `java` and `javac` in path environment
+* link:https://maven.apache.org/download.cgi[Apache Maven] with `mvn` in path environment
+* the great link:http://buy.thingm.com/blink1[blink(1) mk2]
+* link:http://wiki.opennms.org[OpenNMS]
+
+== Get the source
+
+.Get the onmsblink source code and change the directory
+[source, bash]
+----
+git clone https://github.com/opennms-forge/onmsblink.git
+cd onmsblink
+----
+
+.Get the blink1 SDK to build the `blink1.jar` and `libBlink1.jnilib`
+[source, bash]
+----
+git submodule init
+git submodule update
+----
+
+.Build the blink1 SDK dependency libraries
+[source, bash]
+----
+cd blink1
+mkdir libraries
+cd java
+make jar
+----
+
+== Building OnmsBlink
+
+You can build _OnmsBlink_ by invoking `mvn package`:
+
+[source, bash]
+----
+mvn package
+----
+
+== Running the tool
+
+Run the tool by invoking `onmsblink.sh`:
+
+[source, bash]
+----
+./onmsblink.sh --help
+----
+
+=== Command line options
+
+The following options are available:
+
+[options="header, autowidth"]
+|===
+| Option              | Default                       | Description
+| `--url`             | http://localhost:8980/opennms | OpenNMS url
+| `--delay <seconds>` | `10`                          | poll delay in seconds
+| `--username <text>` | `admin`                       | username
+| `--password <text>` | `admin`                       | password
+| `--help`            | `false`                       | display help and exit
+| `--test`            | `false`                       | test and exit
+| `--quiet`           | `false`                       | no output except errors
+|===
+
+=== Example
+[source, bash]
+----
+./onmsblink.sh --quiet --delay 5 --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms
+----
