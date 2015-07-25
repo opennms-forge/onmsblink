@@ -69,7 +69,7 @@
         <dependency>
             <groupId>thingm</groupId>
             <artifactId>blink1</artifactId>
-            <systemPath>${project.basedir}/blink1/blink1.jar</systemPath>
+            <systemPath>${project.basedir}/blink1/libraries/blink1.jar</systemPath>
             <version>1.0</version>
             <scope>system</scope>
         </dependency>
