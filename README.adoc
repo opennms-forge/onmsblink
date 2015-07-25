@@ -1,0 +1,60 @@
+
+= onmsblink
+
+A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_.
+
+In order to compile or execute this tool you need to put the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
+Please refer to the `README.adoc` in the `blink1` directory for instructions.
+
+== Build blink1 SDK dependencies
+
+Please place `blink1.jar` and `libBlink1.jnilib` in this directory before building.
+
+[source, bash]
+----
+cd blink1
+mkdir libraries
+cd java
+make jar
+----
+
+== Building the tool
+
+You can build _OnmsBlink_ by invoking `mvn package`:
+
+[source, bash]
+----
+cd onmsblink
+mvn package
+----
+
+== Running the tool
+
+Run the tool by invoking `onmsblink.sh`:
+
+[source, bash]
+----
+./onmsblink.sh --help
+----
+
+=== Command line options
+
+The following options are available:
+
+[options="header, autowidth"]
+|===
+| Option              | Default                       | Description
+| `--url`             | http://localhost:8980/opennms | OpenNMS url
+| `--delay <seconds>` | `10`                          | poll delay in seconds
+| `--username <text>` | `admin`                       | username
+| `--password <text>` | `admin`                       | password
+| `--help`            | `false`                       | display help and exit
+| `--test`            | `false`                       | test and exit
+| `--quiet`           | `false`                       | no output except errors
+|===
+
+=== Example
+[source, bash]
+----
+./onmsblink.sh --quiet --delay 5 --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms
+----
