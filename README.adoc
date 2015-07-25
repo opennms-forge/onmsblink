@@ -10,6 +10,7 @@ In order to compile or execute this tool you need to build the libraries `blink1
 * link:http://www.oracle.com/technetwork/java/javase/downloads/index.html[Oracle Java 8 JDK] with `java` and `javac` in path environment
 * link:https://maven.apache.org/download.cgi[Apache Maven] with `mvn` in path environment
 * the great link:http://buy.thingm.com/blink1[blink(1) mk2]
+* link:http://wiki.opennms.org[OpenNMS]
 
 == Get the source
 
