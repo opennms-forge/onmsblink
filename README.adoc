@@ -3,8 +3,7 @@
 
 A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_.
 
-In order to compile or execute this tool you need to put the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
-Please refer to the `README.adoc` in the `blink1` directory for instructions.
+In order to compile or execute this tool you need to build the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
 
 == Get the source
 
@@ -15,15 +14,13 @@ git clone https://github.com/indigo423/onmsblink.git
 cd onmsblink
 ----
 
-.Get the blink1 SDK
+.Get the blink1 SDK to build the blink1.jar and libBlink1.jnilib
 [source, bash]
 ----
 git submodule update
 ----
 
-== Build blink1 SDK dependencies
-
-.Build the blink1 SDK libraries
+.Build the blink1 SDK dependency libraries
 [source, bash]
 ----
 cd blink1
