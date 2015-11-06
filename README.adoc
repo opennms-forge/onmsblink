@@ -68,6 +68,7 @@ The following options are available:
 | `--password <text>` | `admin`                       | password
 | `--help`            | `false`                       | display help and exit
 | `--test`            | `false`                       | test and exit
+| `--constant`        | `false`                       | constant glow, no flashing
 | `--quiet`           | `false`                       | no output except errors
 |===
 
