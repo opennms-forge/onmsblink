@@ -1,20 +1,21 @@
 package org.opennms.onmsblink;
 
+import java.awt.Color;
+import java.util.HashMap;
+import java.util.List;
+
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.client.apache.ApacheHttpClient;
 import com.sun.jersey.client.apache.config.DefaultApacheHttpClientConfig;
+
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsSeverity;
 import thingm.blink1.Blink1;
-
-import java.awt.*;
-import java.util.HashMap;
-import java.util.List;
 
 /**
  * onmsblink - a small tool for indicating unacknowledged alarms on your blink1/mk2 USB led.
@@ -135,11 +136,11 @@ public class OnmsBlink {
     @Option(required = false, name = "--delay", usage = "poll delay in seconds")
     private Integer delay = 10;
 
-    @Option(required = false, name = "--username", usage = "username")
-    private String username = "admin";
+    @Option(required = false, name = "--username", usage = "username, if not set OnmsBlink will prompt for username")
+    private String username = null;
 
-    @Option(required = false, name = "--password", usage = "password")
-    private String password = "admin";
+    @Option(required = false, name = "--password", usage = "password, if not set OnmsBlink will prompt for password")
+    private String password = null;
 
     @Option(name = "--test", usage = "test and exit")
     private boolean test = false;
@@ -236,6 +237,14 @@ public class OnmsBlink {
                 }
             }
             System.exit(0);
+        }
+
+        while (username == null || "".equals(username)) {
+            username = System.console().readLine("Username: ");
+        }
+
+        while (password == null || "".equals(password)) {
+            password = new String(System.console().readPassword("Password: "));
         }
 
         /**

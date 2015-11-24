@@ -64,8 +64,8 @@ The following options are available:
 | Option              | Default                       | Description
 | `--url`             | http://localhost:8980/opennms | OpenNMS url
 | `--delay <seconds>` | `10`                          | poll delay in seconds
-| `--username <text>` | `admin`                       | username
-| `--password <text>` | `admin`                       | password
+| `--username <text>` |                               | username, if not given the tool will prompt for the username
+| `--password <text>` |                               | password, if not given the tool will prompt for the password
 | `--help`            | `false`                       | display help and exit
 | `--test`            | `false`                       | test and exit
 | `--constant`        | `false`                       | constant glow, no flashing
