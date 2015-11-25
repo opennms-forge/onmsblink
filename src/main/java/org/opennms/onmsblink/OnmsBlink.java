@@ -4,17 +4,18 @@ import java.awt.Color;
 import java.util.HashMap;
 import java.util.List;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+import org.opennms.netmgt.model.OnmsAlarm;
+import org.opennms.netmgt.model.OnmsSeverity;
+
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.client.apache.ApacheHttpClient;
 import com.sun.jersey.client.apache.config.DefaultApacheHttpClientConfig;
 
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
 import thingm.blink1.Blink1;
 
 /**
@@ -30,7 +31,7 @@ public class OnmsBlink {
         /**
          * the blink1 API instance
          */
-        private final Blink1 blink1 = Blink1.open();
+        private Blink1 blink1 = Blink1.open();
         /**
          * the maximum severity of the requested alarms
          */
@@ -58,14 +59,6 @@ public class OnmsBlink {
 
         public OnmsBlinkWorker() {
             /**
-             * check for devices...
-             */
-            if (blink1.getCount() == 0) {
-                System.err.println("Sorry, no devices found!");
-                System.exit(-1);
-            }
-
-            /**
              * add exit hook for shutting down the blink1
              */
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -92,12 +85,15 @@ public class OnmsBlink {
         public void setConstantGlow(boolean constant) {
             this.constant = constant;
         }
-
+        
         @Override
         public void run() {
             while (true) {
                 if (maxSeverity.getId() <= 3 || isConstantGlow()) {
-                    blink1.fadeToRGB(0, colorMap.get(maxSeverity));
+                    System.out.println(blink1.fadeToRGB(0, colorMap.get(maxSeverity)));
+                    if (blink1.fadeToRGB(0, colorMap.get(maxSeverity)) == -1) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
                         Thread.sleep(1000);
@@ -107,7 +103,9 @@ public class OnmsBlink {
                 } else {
                     int speed = 7 - Math.max(maxSeverity.getId(), 3);
 
-                    blink1.fadeToRGB(100 + speed * 100, colorMap.get(maxSeverity));
+                    if (blink1.fadeToRGB(100 + speed * 100, colorMap.get(maxSeverity)) == -1) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
                         Thread.sleep(75 + 75 * speed);
@@ -115,7 +113,9 @@ public class OnmsBlink {
                         e.printStackTrace();
                     }
 
-                    blink1.fadeToRGB(75 + speed * 75, Color.BLACK);
+                    if (blink1.fadeToRGB(75 + speed * 75, Color.BLACK) == -1) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
                         Thread.sleep(100 + 50 * speed);
