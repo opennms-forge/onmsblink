@@ -61,15 +61,16 @@ The following options are available:
 
 [options="header, autowidth"]
 |===
-| Option              | Default                       | Description
-| `--url`             | http://localhost:8980/opennms | OpenNMS url
-| `--delay <seconds>` | `10`                          | poll delay in seconds
-| `--username <text>` |                               | username, if not given the tool will prompt for the username
-| `--password <text>` |                               | password, if not given the tool will prompt for the password
-| `--help`            | `false`                       | display help and exit
-| `--test`            | `false`                       | test and exit
-| `--constant`        | `false`                       | constant glow, no flashing
-| `--quiet`           | `false`                       | no output except errors
+| Option                | Default                       | Description
+| `--url`               | http://localhost:8980/opennms | OpenNMS url
+| `--delay <seconds>`   | `10`                          | poll delay in seconds
+| `--username <text>`   |                               | username, if not given the tool will prompt for the username
+| `--password <text>`   |                               | password, if not given the tool will prompt for the password
+| `--execute <program>` |                               | execute program on status change (placeholders are %os% for old severity, %ns% for new severity, %oc% for old alarm count and %nc% for new alarm count)
+| `--help`              | `false`                       | display help and exit
+| `--test`              | `false`                       | test and exit
+| `--constant`          | `false`                       | constant glow, no flashing
+| `--quiet`             | `false`                       | no output except errors
 |===
 
 === Example

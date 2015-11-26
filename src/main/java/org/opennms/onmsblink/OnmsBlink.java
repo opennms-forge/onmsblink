@@ -4,17 +4,18 @@ import java.awt.Color;
 import java.util.HashMap;
 import java.util.List;
 
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
+import org.opennms.netmgt.model.OnmsAlarm;
+import org.opennms.netmgt.model.OnmsSeverity;
+
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.client.apache.ApacheHttpClient;
 import com.sun.jersey.client.apache.config.DefaultApacheHttpClientConfig;
 
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
 import thingm.blink1.Blink1;
 
 /**
@@ -28,19 +29,27 @@ public class OnmsBlink {
      */
     private static class OnmsBlinkWorker implements Runnable {
         /**
+         * error constant
+         */
+        private static final int BLINK1_ERROR = -1;
+        /**
+         * millis seconds constants
+         */
+        private static final int BLINK1_LOW_DELAY = 50;
+        private static final int BLINK1_MEDIUM_DELAY = 75;
+        private static final int BLINK1_HIGH_DELAY = 100;
+        /**
          * the blink1 API instance
          */
-        private final Blink1 blink1 = Blink1.open();
+        private Blink1 blink1 = Blink1.open();
         /**
          * the maximum severity of the requested alarms
          */
         private OnmsSeverity maxSeverity = OnmsSeverity.NORMAL;
-
         /**
          * constant glow
          */
         private boolean constant = false;
-
         /**
          * Map for mapping severities to colors
          */
@@ -57,14 +66,6 @@ public class OnmsBlink {
         }
 
         public OnmsBlinkWorker() {
-            /**
-             * check for devices...
-             */
-            if (blink1.getCount() == 0) {
-                System.err.println("Sorry, no devices found!");
-                System.exit(-1);
-            }
-
             /**
              * add exit hook for shutting down the blink1
              */
@@ -96,8 +97,10 @@ public class OnmsBlink {
         @Override
         public void run() {
             while (true) {
-                if (maxSeverity.getId() <= 3 || isConstantGlow()) {
-                    blink1.fadeToRGB(0, colorMap.get(maxSeverity));
+                if (maxSeverity.isLessThanOrEqual(OnmsSeverity.NORMAL) || isConstantGlow()) {
+                    if (blink1.fadeToRGB(0, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
                         Thread.sleep(1000);
@@ -105,20 +108,24 @@ public class OnmsBlink {
                         e.printStackTrace();
                     }
                 } else {
-                    int speed = 7 - Math.max(maxSeverity.getId(), 3);
+                    int speed = OnmsSeverity.CRITICAL.getId() - Math.max(maxSeverity.getId(), OnmsSeverity.NORMAL.getId());
 
-                    blink1.fadeToRGB(100 + speed * 100, colorMap.get(maxSeverity));
+                    if (blink1.fadeToRGB((1 + speed) * BLINK1_HIGH_DELAY, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
-                        Thread.sleep(75 + 75 * speed);
+                        Thread.sleep((1 + speed) * BLINK1_MEDIUM_DELAY);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
-                    blink1.fadeToRGB(75 + speed * 75, Color.BLACK);
+                    if (blink1.fadeToRGB((1 + speed) * BLINK1_MEDIUM_DELAY, Color.BLACK) == BLINK1_ERROR) {
+                        blink1 = Blink1.open();
+                    }
 
                     try {
-                        Thread.sleep(100 + 50 * speed);
+                        Thread.sleep((1 + speed) * BLINK1_LOW_DELAY);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -153,6 +160,9 @@ public class OnmsBlink {
 
     @Option(name = "--quiet", usage = "no output when polling, only errors")
     private boolean quiet = false;
+
+    @Option(name = "--execute", usage = "execute program on status change (placeholders are %os% for old severity, %ns% for new severity, %oc% for old alarm count and %nc% for new alarm count)")
+    private String execute = null;
 
     /**
      * Constructor for instantiating new objects of this class.
@@ -259,6 +269,10 @@ public class OnmsBlink {
         /**
          * Loop for requesting the alarms and setting the maxSeverity field.
          */
+
+        int oldAlarmCount = 0;
+        OnmsSeverity oldSeverity = OnmsSeverity.NORMAL;
+
         while (true) {
             final WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
 
@@ -266,28 +280,50 @@ public class OnmsBlink {
                 final List<OnmsAlarm> onmsAlarms = webResource.header("Accept", "application/xml").get(new GenericType<List<OnmsAlarm>>() {
                 });
 
-                int maxSeverityId = 3;
+                OnmsSeverity newSeverity = OnmsSeverity.NORMAL;
+                int newAlarmCount = onmsAlarms.size();
 
                 for (final OnmsAlarm onmsAlarm : onmsAlarms) {
-                    maxSeverityId = Math.max(maxSeverityId, onmsAlarm.getSeverityId());
+                    if (onmsAlarm.getSeverity().isGreaterThan(newSeverity)) {
+                        newSeverity = onmsAlarm.getSeverity();
+                    }
                 }
 
-                onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(maxSeverityId));
+                onmsBlinkWorker.setMaxSeverity(newSeverity);
 
                 if (!quiet) {
-                    System.out.println("Received " + onmsAlarms.size() + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
+                    System.out.println("Received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
-            } catch (Exception ex) {
-                ex.printStackTrace(System.err);
+                if (execute != null) {
+                    ProcessBuilder processBuilder = new ProcessBuilder();
+
+                    String executeWithArguments = execute.replace("%os%", oldSeverity.toString())
+                            .replace("%ns%", newSeverity.toString())
+                            .replace("%oc%", String.valueOf(oldAlarmCount))
+                            .replace("%nc%", String.valueOf(newAlarmCount));
+
+                    Process process = (quiet ? processBuilder.command("sh", "-c", executeWithArguments).start()
+                            : processBuilder.command("sh", "-c", executeWithArguments).inheritIO().start());
+
+                    int resultCode = process.waitFor();
+
+                    if (!quiet && resultCode != 0) {
+                        System.out.println("Execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
+                    }
+                }
+
+                oldSeverity = newSeverity;
+                oldAlarmCount = newAlarmCount;
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
             }
 
             try {
                 Thread.sleep(delay * 1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                e.printStackTrace(System.err);
             }
         }
     }
-
 }
