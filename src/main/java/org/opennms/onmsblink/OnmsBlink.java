@@ -29,6 +29,16 @@ public class OnmsBlink {
      */
     private static class OnmsBlinkWorker implements Runnable {
         /**
+         * error constant
+         */
+        private static final int BLINK1_ERROR = -1;
+        /**
+         * millis seconds constants
+         */
+        private static final int BLINK1_LOW_DELAY = 50;
+        private static final int BLINK1_MEDIUM_DELAY = 75;
+        private static final int BLINK1_HIGH_DELAY = 100;
+        /**
          * the blink1 API instance
          */
         private Blink1 blink1 = Blink1.open();
@@ -36,12 +46,10 @@ public class OnmsBlink {
          * the maximum severity of the requested alarms
          */
         private OnmsSeverity maxSeverity = OnmsSeverity.NORMAL;
-
         /**
          * constant glow
          */
         private boolean constant = false;
-
         /**
          * Map for mapping severities to colors
          */
@@ -89,8 +97,8 @@ public class OnmsBlink {
         @Override
         public void run() {
             while (true) {
-                if (maxSeverity.getId() <= 3 || isConstantGlow()) {
-                    if (blink1.fadeToRGB(0, colorMap.get(maxSeverity)) == -1) {
+                if (maxSeverity.isLessThanOrEqual(OnmsSeverity.NORMAL) || isConstantGlow()) {
+                    if (blink1.fadeToRGB(0, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
                         blink1 = Blink1.open();
                     }
 
@@ -100,24 +108,24 @@ public class OnmsBlink {
                         e.printStackTrace();
                     }
                 } else {
-                    int speed = 7 - Math.max(maxSeverity.getId(), 3);
+                    int speed = OnmsSeverity.CRITICAL.getId() - Math.max(maxSeverity.getId(), OnmsSeverity.NORMAL.getId());
 
-                    if (blink1.fadeToRGB(100 + speed * 100, colorMap.get(maxSeverity)) == -1) {
+                    if (blink1.fadeToRGB((1 + speed) * BLINK1_HIGH_DELAY, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
                         blink1 = Blink1.open();
                     }
 
                     try {
-                        Thread.sleep(75 + 75 * speed);
+                        Thread.sleep((1 + speed) * BLINK1_MEDIUM_DELAY);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
 
-                    if (blink1.fadeToRGB(75 + speed * 75, Color.BLACK) == -1) {
+                    if (blink1.fadeToRGB((1 + speed) * BLINK1_MEDIUM_DELAY, Color.BLACK) == BLINK1_ERROR) {
                         blink1 = Blink1.open();
                     }
 
                     try {
-                        Thread.sleep(100 + 50 * speed);
+                        Thread.sleep((1 + speed) * BLINK1_LOW_DELAY);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -262,8 +270,8 @@ public class OnmsBlink {
          * Loop for requesting the alarms and setting the maxSeverity field.
          */
 
-        int oldSeverityId = 3;
         int oldAlarmCount = 0;
+        OnmsSeverity oldSeverity = OnmsSeverity.NORMAL;
 
         while (true) {
             final WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
@@ -272,14 +280,16 @@ public class OnmsBlink {
                 final List<OnmsAlarm> onmsAlarms = webResource.header("Accept", "application/xml").get(new GenericType<List<OnmsAlarm>>() {
                 });
 
-                int newSeverityId = 3;
+                OnmsSeverity newSeverity = OnmsSeverity.NORMAL;
                 int newAlarmCount = onmsAlarms.size();
 
                 for (final OnmsAlarm onmsAlarm : onmsAlarms) {
-                    newSeverityId = Math.max(newSeverityId, onmsAlarm.getSeverityId());
+                    if (onmsAlarm.getSeverity().isGreaterThan(newSeverity)) {
+                        newSeverity = onmsAlarm.getSeverity();
+                    }
                 }
 
-                onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(newSeverityId));
+                onmsBlinkWorker.setMaxSeverity(newSeverity);
 
                 if (!quiet) {
                     System.out.println("Received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
@@ -288,8 +298,8 @@ public class OnmsBlink {
                 if (execute != null) {
                     ProcessBuilder processBuilder = new ProcessBuilder();
 
-                    String executeWithArguments = execute.replace("%os%", OnmsSeverity.get(oldSeverityId).toString())
-                            .replace("%ns%", OnmsSeverity.get(newSeverityId).toString())
+                    String executeWithArguments = execute.replace("%os%", oldSeverity.toString())
+                            .replace("%ns%", newSeverity.toString())
                             .replace("%oc%", String.valueOf(oldAlarmCount))
                             .replace("%nc%", String.valueOf(newAlarmCount));
 
@@ -303,16 +313,16 @@ public class OnmsBlink {
                     }
                 }
 
-                oldSeverityId = newSeverityId;
+                oldSeverity = newSeverity;
                 oldAlarmCount = newAlarmCount;
-            } catch (Exception ex) {
-                ex.printStackTrace(System.err);
+            } catch (Exception e) {
+                e.printStackTrace(System.err);
             }
 
             try {
                 Thread.sleep(delay * 1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                e.printStackTrace(System.err);
             }
         }
     }
