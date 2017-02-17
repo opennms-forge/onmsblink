@@ -1,7 +1,7 @@
 
-= onmsblink
+= OnmsBlink
 
-A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_.
+A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_ or trigger _IFTTT_ applets.
 
 In order to compile or execute this tool you need to build the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
 
@@ -14,7 +14,7 @@ In order to compile or execute this tool you need to build the libraries `blink1
 
 == Get the source
 
-.Get the onmsblink source code and change the directory
+.Get the _OnmsBlink_ source code and change the directory
 [source, bash]
 ----
 git clone https://github.com/opennms-forge/onmsblink.git
@@ -71,6 +71,7 @@ The following options are available:
 | `--test`              | `false`                       | test and exit
 | `--constant`          | `false`                       | constant glow, no flashing
 | `--quiet`             | `false`                       | no output except errors
+| `--ifttt`             | `false`                       | send _IFTTT_ events defined in ifttt-config.xml
 |===
 
 === Example
@@ -78,3 +79,97 @@ The following options are available:
 ----
 ./onmsblink.sh --quiet --delay 5 --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms
 ----
+
+=== IFTTT
+
+You can use _OnmsBlink_ to trigger actions in _IFTTT_. Create your applets and use the _Maker Service_ trigger by defining
+a event name for the web request. The configuration file `ifttt-config.xml` contains so called trigger-sets. These named
+trigger-sets contain one or more triggers to be executed by _OnmsBlink_ at the given event. Each trigger inside a trigger-set
+defines the event name to be triggered at _IFTTT Maker Service_ and three values. These values can be used to set additional
+attributes of the defined _IFTTT_ applet action. The following trigger-sets can be defined:
+
+[options="header, autowidth"]
+|===
+| Name     | Execution
+| ON       | on start of the _OnmsBlink_ program to switch on a device
+| OFF      | on exit of the _OnmsBlink_ program to switch off a device
+| NORMAL   | if severity is NORMAL
+| WARNING  | if severity is WARNING
+| MINOR    | if severity is MINOR
+| MAJOR    | if severity is MAJOR
+| CRITICAL | if severity is CRITICAL
+|===
+
+[source, bash]
+----
+./onmsblink.sh --quiet --delay 5 --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms --ifttt
+----
+
+The following example shows the configuration file for a WiFi light bulb controlled via _IFTTT_. The defined applets use
+`value1` for setting the color and `value2` for setting the brightness. You need the key of the _IFTTT Maker Service_. This
+key can be found in your _IFTTT_ service settings.
+
+[source, xml]
+----
+<ifttt-config key="your-key-here">
+
+    <trigger-set name="ON">
+        <trigger eventName="on" delay="0">
+            <value1></value1>
+            <value2></value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="OFF">
+        <trigger eventName="off" delay="0">
+            <value1></value1>
+            <value2></value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="NORMAL">
+        <trigger eventName="color" delay="0">
+            <value1>#336600</value1>
+            <value2>0.40</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="WARNING">
+        <trigger eventName="color" delay="0">
+            <value1>#FFCC00</value1>
+            <value2>0.50</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="MINOR">
+        <trigger eventName="color" delay="0">
+            <value1>#FF9900</value1>
+            <value2>0.60</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="MAJOR">
+        <trigger eventName="color" delay="0">
+            <value1>#CC3300</value1>
+            <value2>0.70</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="CRITICAL">
+        <trigger eventName="flash" delay="0">
+            <value1>#FF0000</value1>
+            <value2>0.80</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+</ifttt-config>
+----
+
+

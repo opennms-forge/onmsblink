@@ -1,14 +1,21 @@
 package org.opennms.onmsblink;
 
 import java.awt.Color;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
+
+import javax.xml.bind.JAXB;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsSeverity;
+import org.opennms.onmsblink.ifttt.IfTttTrigger;
+import org.opennms.onmsblink.ifttt.config.IfTttConfig;
+import org.opennms.onmsblink.ifttt.config.Trigger;
+import org.opennms.onmsblink.ifttt.config.TriggerSet;
 
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
@@ -64,6 +71,7 @@ public class OnmsBlink {
             colorMap.put(OnmsSeverity.MAJOR, new Color(0xCC3300));
             colorMap.put(OnmsSeverity.CRITICAL, new Color(0xFF0000));
         }
+
 
         public OnmsBlinkWorker() {
             /**
@@ -134,6 +142,7 @@ public class OnmsBlink {
         }
     }
 
+
     /**
      * Command line options
      */
@@ -163,6 +172,14 @@ public class OnmsBlink {
 
     @Option(name = "--execute", usage = "execute program on status change (placeholders are %os% for old severity, %ns% for new severity, %oc% for old alarm count and %nc% for new alarm count)")
     private String execute = null;
+
+    @Option(name = "--ifttt", usage = "trigger IFTTT events defined in ifttt-config.xml")
+    public boolean ifttt = false;
+
+    /**
+     * IfTtt config
+     */
+    IfTttConfig ifTttConfig = null;
 
     /**
      * Constructor for instantiating new objects of this class.
@@ -220,7 +237,56 @@ public class OnmsBlink {
         }
     }
 
+    private void fireIfTttTriggerSet(OnmsSeverity onmsSeverity) {
+        fireIfTttTriggerSet(onmsSeverity.getLabel());
+    }
+
+    private void fireIfTttTriggerSet(String name) {
+        if (!ifttt || ifTttConfig == null) {
+            return;
+        }
+
+        TriggerSet triggerSet = ifTttConfig.getTriggerSetForName(name);
+
+        if (triggerSet != null) {
+            for (Trigger trigger : triggerSet.getTriggers()) {
+
+                new IfTttTrigger()
+                        .key(ifTttConfig.getKey())
+                        .event(trigger.getEventName())
+                        .value1(trigger.getValue1())
+                        .value2(trigger.getValue2())
+                        .value3(trigger.getValue3())
+                        .quiet(quiet)
+                        .trigger();
+
+                try {
+                    Thread.sleep(trigger.getDelay());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            if (!quiet) {
+                System.out.println("Warning: no trigger-set with name '" + name + "' defined!");
+            }
+        }
+    }
+
     public void execute() {
+        if (ifttt) {
+            ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
+
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    fireIfTttTriggerSet("off");
+                }
+            }));
+
+            fireIfTttTriggerSet("on");
+        }
+
         /**
          * Create a thread for cycling through the colors
          */
@@ -235,6 +301,7 @@ public class OnmsBlink {
         if (test) {
             for (int i = 3; i < 8; i++) {
                 onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(i));
+                fireIfTttTriggerSet(OnmsSeverity.get(i));
 
                 if (!quiet) {
                     System.out.println("Setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
@@ -246,6 +313,9 @@ public class OnmsBlink {
                     e.printStackTrace();
                 }
             }
+
+            fireIfTttTriggerSet("off");
+
             System.exit(0);
         }
 
@@ -290,6 +360,7 @@ public class OnmsBlink {
                 }
 
                 onmsBlinkWorker.setMaxSeverity(newSeverity);
+                fireIfTttTriggerSet(newSeverity);
 
                 if (!quiet) {
                     System.out.println("Received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
