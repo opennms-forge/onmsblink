@@ -268,14 +268,17 @@ public class OnmsBlink {
             }
         } else {
             if (!quiet) {
-                System.out.println("Warning: no trigger-set with name '" + name + "' defined!");
+                System.out.println("ifttt: no trigger-set with name '" + name + "' defined");
             }
         }
     }
 
     public void execute() {
         if (ifttt) {
-            ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
+            if (!quiet) {
+                System.out.println("ifttt: loading configuration file ifttt-config.xml");
+                ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
+            }
 
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
@@ -304,7 +307,7 @@ public class OnmsBlink {
                 fireIfTttTriggerSet(OnmsSeverity.get(i));
 
                 if (!quiet) {
-                    System.out.println("Setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
+                    System.out.println("test: setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
                 try {
@@ -341,7 +344,7 @@ public class OnmsBlink {
          */
 
         int oldAlarmCount = 0;
-        OnmsSeverity oldSeverity = OnmsSeverity.NORMAL;
+        OnmsSeverity oldSeverity = OnmsSeverity.INDETERMINATE;
 
         while (true) {
             final WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
@@ -360,10 +363,13 @@ public class OnmsBlink {
                 }
 
                 onmsBlinkWorker.setMaxSeverity(newSeverity);
-                fireIfTttTriggerSet(newSeverity);
+
+                if (!newSeverity.equals(oldSeverity)) {
+                    fireIfTttTriggerSet(newSeverity);
+                }
 
                 if (!quiet) {
-                    System.out.println("Received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
+                    System.out.println("opennms: received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
                 if (execute != null) {
@@ -374,13 +380,17 @@ public class OnmsBlink {
                             .replace("%oc%", String.valueOf(oldAlarmCount))
                             .replace("%nc%", String.valueOf(newAlarmCount));
 
+                    if (!quiet) {
+                        System.out.println("execute: executing '" + executeWithArguments + "'");
+                    }
+
                     Process process = (quiet ? processBuilder.command("sh", "-c", executeWithArguments).start()
                             : processBuilder.command("sh", "-c", executeWithArguments).inheritIO().start());
 
                     int resultCode = process.waitFor();
 
                     if (!quiet && resultCode != 0) {
-                        System.out.println("Execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
+                        System.out.println("execute: execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
                     }
                 }
 
