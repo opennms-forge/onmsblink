@@ -277,8 +277,9 @@ public class OnmsBlink {
         if (ifttt) {
             if (!quiet) {
                 System.out.println("ifttt: loading configuration file ifttt-config.xml");
-                ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
             }
+
+            ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
 
             Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
                 @Override
