@@ -31,6 +31,37 @@ import thingm.blink1.Blink1;
  * @author Christian Pape
  */
 public class OnmsBlink {
+
+    /**
+     * Helper interface for replacing variables in commands and values
+     */
+    private interface VariableNameExpansion {
+        String replace(String string);
+    }
+
+    /**
+     * Default implementation
+     */
+    private static class DefaultVariableNameExpansion implements VariableNameExpansion {
+        OnmsSeverity oldSeverity, newSeverity;
+        int oldAlarmCount, newAlarmCount;
+
+        public DefaultVariableNameExpansion(OnmsSeverity oldSeverity, OnmsSeverity newSeverity, int oldAlarmCount, int newAlarmCount) {
+            this.oldSeverity = oldSeverity;
+            this.newSeverity = newSeverity;
+            this.oldAlarmCount = oldAlarmCount;
+            this.newAlarmCount = newAlarmCount;
+        }
+
+        @Override
+        public String replace(String string) {
+            return string.replace("%os%", oldSeverity.toString())
+                    .replace("%ns%", newSeverity.toString())
+                    .replace("%oc%", String.valueOf(oldAlarmCount))
+                    .replace("%nc%", String.valueOf(newAlarmCount));
+        }
+    }
+
     /**
      * Worker class
      */
@@ -237,11 +268,21 @@ public class OnmsBlink {
         }
     }
 
-    private void fireIfTttTriggerSet(OnmsSeverity onmsSeverity) {
-        fireIfTttTriggerSet(onmsSeverity.getLabel());
+
+    private void fireIfTttTriggerSet(OnmsSeverity newSeverity, VariableNameExpansion variableNameExpansion) {
+        fireIfTttTriggerSet(newSeverity.getLabel(), variableNameExpansion);
     }
 
     private void fireIfTttTriggerSet(String name) {
+        fireIfTttTriggerSet(name, new VariableNameExpansion() {
+            @Override
+            public String replace(String string) {
+                return string;
+            }
+        });
+    }
+
+    private void fireIfTttTriggerSet(String name, VariableNameExpansion variableNameExpansion) {
         if (!ifttt || ifTttConfig == null) {
             return;
         }
@@ -254,9 +295,9 @@ public class OnmsBlink {
                 new IfTttTrigger()
                         .key(ifTttConfig.getKey())
                         .event(trigger.getEventName())
-                        .value1(trigger.getValue1())
-                        .value2(trigger.getValue2())
-                        .value3(trigger.getValue3())
+                        .value1(variableNameExpansion.replace(trigger.getValue1()))
+                        .value2(variableNameExpansion.replace(trigger.getValue2()))
+                        .value3(variableNameExpansion.replace(trigger.getValue3()))
                         .quiet(quiet)
                         .trigger();
 
@@ -305,14 +346,14 @@ public class OnmsBlink {
         if (test) {
             for (int i = 3; i < 8; i++) {
                 onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(i));
-                fireIfTttTriggerSet(OnmsSeverity.get(i));
+                fireIfTttTriggerSet(OnmsSeverity.get(i), new DefaultVariableNameExpansion(OnmsSeverity.get(i - 1), OnmsSeverity.get(i), 0, 1));
 
                 if (!quiet) {
                     System.out.println("test: setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(8000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -365,8 +406,10 @@ public class OnmsBlink {
 
                 onmsBlinkWorker.setMaxSeverity(newSeverity);
 
+                DefaultVariableNameExpansion defaultVariableNameExpansion = new DefaultVariableNameExpansion(oldSeverity, newSeverity, oldAlarmCount, newAlarmCount);
+
                 if (!newSeverity.equals(oldSeverity)) {
-                    fireIfTttTriggerSet(newSeverity);
+                    fireIfTttTriggerSet(newSeverity, defaultVariableNameExpansion);
                 }
 
                 if (!quiet) {
@@ -376,10 +419,7 @@ public class OnmsBlink {
                 if (execute != null) {
                     ProcessBuilder processBuilder = new ProcessBuilder();
 
-                    String executeWithArguments = execute.replace("%os%", oldSeverity.toString())
-                            .replace("%ns%", newSeverity.toString())
-                            .replace("%oc%", String.valueOf(oldAlarmCount))
-                            .replace("%nc%", String.valueOf(newAlarmCount));
+                    String executeWithArguments = defaultVariableNameExpansion.replace(execute);
 
                     if (!quiet) {
                         System.out.println("execute: executing '" + executeWithArguments + "'");

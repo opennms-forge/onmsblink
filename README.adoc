@@ -66,7 +66,7 @@ The following options are available:
 | `--delay <seconds>`   | `10`                          | poll delay in seconds
 | `--username <text>`   |                               | username, if not given the tool will prompt for the username
 | `--password <text>`   |                               | password, if not given the tool will prompt for the password
-| `--execute <program>` |                               | execute program on status change (placeholders are %os% for old severity, %ns% for new severity, %oc% for old alarm count and %nc% for new alarm count)
+| `--execute <program>` |                               | execute program on status change (placeholders are `%os%` for old severity, `%ns%` for new severity, `%oc%` for old alarm count and `%nc%` for new alarm count)
 | `--help`              | `false`                       | display help and exit
 | `--test`              | `false`                       | test and exit
 | `--constant`          | `false`                       | constant glow, no flashing
@@ -109,6 +109,9 @@ The following example shows the configuration file for a WiFi light bulb control
 `value1` for setting the color and `value2` for setting the brightness. You need the key of the _IFTTT Maker Service_. This
 key can be found in your _IFTTT_ service settings.
 
+NOTE: For the severity-based trigger the following placeholders can be used in the three value fields:
+`%os%` for old severity, `%ns%` for new severity, `%oc%` for old alarm count and `%nc%` for new alarm count
+
 [source, xml]
 ----
 <ifttt-config key="your-key-here">
@@ -133,7 +136,7 @@ key can be found in your _IFTTT_ service settings.
         <trigger eventName="color" delay="0">
             <value1>#336600</value1>
             <value2>0.40</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -141,7 +144,7 @@ key can be found in your _IFTTT_ service settings.
         <trigger eventName="color" delay="0">
             <value1>#FFCC00</value1>
             <value2>0.50</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -149,7 +152,7 @@ key can be found in your _IFTTT_ service settings.
         <trigger eventName="color" delay="0">
             <value1>#FF9900</value1>
             <value2>0.60</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -157,7 +160,7 @@ key can be found in your _IFTTT_ service settings.
         <trigger eventName="color" delay="0">
             <value1>#CC3300</value1>
             <value2>0.70</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -165,7 +168,7 @@ key can be found in your _IFTTT_ service settings.
         <trigger eventName="flash" delay="0">
             <value1>#FF0000</value1>
             <value2>0.80</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 

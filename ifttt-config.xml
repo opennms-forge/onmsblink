@@ -20,7 +20,7 @@
         <trigger eventName="color" delay="0">
             <value1>#336600</value1>
             <value2>0.40</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -28,7 +28,7 @@
         <trigger eventName="color" delay="0">
             <value1>#FFCC00</value1>
             <value2>0.50</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -36,7 +36,7 @@
         <trigger eventName="color" delay="0">
             <value1>#FF9900</value1>
             <value2>0.60</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -44,7 +44,7 @@
         <trigger eventName="color" delay="0">
             <value1>#CC3300</value1>
             <value2>0.70</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
     </trigger-set>
 
@@ -52,7 +52,7 @@
         <trigger eventName="color" delay="1000">
             <value1>#FF0000</value1>
             <value2>0.80</value2>
-            <value3></value3>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
         </trigger>
 
         <trigger eventName="blink" delay="0">
