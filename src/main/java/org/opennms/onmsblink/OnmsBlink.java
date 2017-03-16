@@ -408,7 +408,7 @@ public class OnmsBlink {
 
                 DefaultVariableNameExpansion defaultVariableNameExpansion = new DefaultVariableNameExpansion(oldSeverity, newSeverity, oldAlarmCount, newAlarmCount);
 
-                if (!newSeverity.equals(oldSeverity)) {
+                if (!newSeverity.equals(oldSeverity) || newAlarmCount != oldAlarmCount) {
                     fireIfTttTriggerSet(newSeverity, defaultVariableNameExpansion);
                 }
 
