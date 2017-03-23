@@ -279,7 +279,6 @@ public class OnmsBlink {
         }
     }
 
-
     private void fireIfTttTriggerSet(MinimalSeverity newSeverity, VariableNameExpansion variableNameExpansion) {
         fireIfTttTriggerSet(newSeverity.getLabel(), variableNameExpansion);
     }
