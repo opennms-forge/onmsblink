@@ -72,6 +72,7 @@ The following options are available:
 | `--constant`          | `false`                       | constant glow, no flashing
 | `--quiet`             | `false`                       | no output except errors
 | `--ifttt`             | `false`                       | send _IFTTT_ events defined in ifttt-config.xml
+| `--category`          |                               | category filter (Java regular-expression)
 |===
 
 === Example
@@ -79,6 +80,20 @@ The following options are available:
 ----
 ./onmsblink.sh --quiet --delay 5 --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms
 ----
+
+=== Category filter
+
+In general alarms are associated with nodes and these are organized in categories. You can use the `--category` option to
+filter for category names by using a Java regular-expression. Severity and alarm count will be computed based on these
+alarms.
+
+=== Example
+[source, bash]
+----
+./onmsblink.sh --username admin --password secret --url http://opennms.yourdomain.com:8980/opennms --category 'Routers|Notification.*'
+----
+
+The given example will filter for alarms based on nodes in the category `Routers` and categories starting with `Notification`.
 
 === IFTTT
 
