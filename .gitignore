@@ -3,4 +3,5 @@
 *.ipr
 target/
 .DS_Store
+talk.sh
 .idea/

@@ -1,14 +1,21 @@
 package org.opennms.onmsblink;
 
 import java.awt.Color;
+import java.io.File;
 import java.util.HashMap;
 import java.util.List;
+
+import javax.xml.bind.JAXB;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.opennms.netmgt.model.OnmsAlarm;
 import org.opennms.netmgt.model.OnmsSeverity;
+import org.opennms.onmsblink.ifttt.IfTttTrigger;
+import org.opennms.onmsblink.ifttt.config.IfTttConfig;
+import org.opennms.onmsblink.ifttt.config.Trigger;
+import org.opennms.onmsblink.ifttt.config.TriggerSet;
 
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
@@ -24,6 +31,37 @@ import thingm.blink1.Blink1;
  * @author Christian Pape
  */
 public class OnmsBlink {
+
+    /**
+     * Helper interface for replacing variables in commands and values
+     */
+    private interface VariableNameExpansion {
+        String replace(String string);
+    }
+
+    /**
+     * Default implementation
+     */
+    private static class DefaultVariableNameExpansion implements VariableNameExpansion {
+        OnmsSeverity oldSeverity, newSeverity;
+        int oldAlarmCount, newAlarmCount;
+
+        public DefaultVariableNameExpansion(OnmsSeverity oldSeverity, OnmsSeverity newSeverity, int oldAlarmCount, int newAlarmCount) {
+            this.oldSeverity = oldSeverity;
+            this.newSeverity = newSeverity;
+            this.oldAlarmCount = oldAlarmCount;
+            this.newAlarmCount = newAlarmCount;
+        }
+
+        @Override
+        public String replace(String string) {
+            return string.replace("%os%", oldSeverity.toString())
+                    .replace("%ns%", newSeverity.toString())
+                    .replace("%oc%", String.valueOf(oldAlarmCount))
+                    .replace("%nc%", String.valueOf(newAlarmCount));
+        }
+    }
+
     /**
      * Worker class
      */
@@ -64,6 +102,7 @@ public class OnmsBlink {
             colorMap.put(OnmsSeverity.MAJOR, new Color(0xCC3300));
             colorMap.put(OnmsSeverity.CRITICAL, new Color(0xFF0000));
         }
+
 
         public OnmsBlinkWorker() {
             /**
@@ -134,6 +173,7 @@ public class OnmsBlink {
         }
     }
 
+
     /**
      * Command line options
      */
@@ -163,6 +203,14 @@ public class OnmsBlink {
 
     @Option(name = "--execute", usage = "execute program on status change (placeholders are %os% for old severity, %ns% for new severity, %oc% for old alarm count and %nc% for new alarm count)")
     private String execute = null;
+
+    @Option(name = "--ifttt", usage = "trigger IFTTT events defined in ifttt-config.xml")
+    public boolean ifttt = false;
+
+    /**
+     * IfTtt config
+     */
+    IfTttConfig ifTttConfig = null;
 
     /**
      * Constructor for instantiating new objects of this class.
@@ -220,7 +268,70 @@ public class OnmsBlink {
         }
     }
 
+
+    private void fireIfTttTriggerSet(OnmsSeverity newSeverity, VariableNameExpansion variableNameExpansion) {
+        fireIfTttTriggerSet(newSeverity.getLabel(), variableNameExpansion);
+    }
+
+    private void fireIfTttTriggerSet(String name) {
+        fireIfTttTriggerSet(name, new VariableNameExpansion() {
+            @Override
+            public String replace(String string) {
+                return string;
+            }
+        });
+    }
+
+    private void fireIfTttTriggerSet(String name, VariableNameExpansion variableNameExpansion) {
+        if (!ifttt || ifTttConfig == null) {
+            return;
+        }
+
+        TriggerSet triggerSet = ifTttConfig.getTriggerSetForName(name);
+
+        if (triggerSet != null) {
+            for (Trigger trigger : triggerSet.getTriggers()) {
+
+                new IfTttTrigger()
+                        .key(ifTttConfig.getKey())
+                        .event(trigger.getEventName())
+                        .value1(variableNameExpansion.replace(trigger.getValue1()))
+                        .value2(variableNameExpansion.replace(trigger.getValue2()))
+                        .value3(variableNameExpansion.replace(trigger.getValue3()))
+                        .quiet(quiet)
+                        .trigger();
+
+                try {
+                    Thread.sleep(trigger.getDelay());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            if (!quiet) {
+                System.out.println("ifttt: no trigger-set with name '" + name + "' defined");
+            }
+        }
+    }
+
     public void execute() {
+        if (ifttt) {
+            if (!quiet) {
+                System.out.println("ifttt: loading configuration file ifttt-config.xml");
+            }
+
+            ifTttConfig = JAXB.unmarshal(new File("ifttt-config.xml"), IfTttConfig.class);
+
+            Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    fireIfTttTriggerSet("off");
+                }
+            }));
+
+            fireIfTttTriggerSet("on");
+        }
+
         /**
          * Create a thread for cycling through the colors
          */
@@ -235,17 +346,21 @@ public class OnmsBlink {
         if (test) {
             for (int i = 3; i < 8; i++) {
                 onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(i));
+                fireIfTttTriggerSet(OnmsSeverity.get(i), new DefaultVariableNameExpansion(OnmsSeverity.get(i - 1), OnmsSeverity.get(i), 0, 1));
 
                 if (!quiet) {
-                    System.out.println("Setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
+                    System.out.println("test: setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
                 try {
-                    Thread.sleep(5000);
+                    Thread.sleep(8000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
+
+            fireIfTttTriggerSet("off");
+
             System.exit(0);
         }
 
@@ -271,7 +386,7 @@ public class OnmsBlink {
          */
 
         int oldAlarmCount = 0;
-        OnmsSeverity oldSeverity = OnmsSeverity.NORMAL;
+        OnmsSeverity oldSeverity = OnmsSeverity.INDETERMINATE;
 
         while (true) {
             final WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
@@ -291,17 +406,24 @@ public class OnmsBlink {
 
                 onmsBlinkWorker.setMaxSeverity(newSeverity);
 
+                DefaultVariableNameExpansion defaultVariableNameExpansion = new DefaultVariableNameExpansion(oldSeverity, newSeverity, oldAlarmCount, newAlarmCount);
+
+                if (!newSeverity.equals(oldSeverity) || newAlarmCount != oldAlarmCount) {
+                    fireIfTttTriggerSet(newSeverity, defaultVariableNameExpansion);
+                }
+
                 if (!quiet) {
-                    System.out.println("Received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
+                    System.out.println("opennms: received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
                 }
 
                 if (execute != null) {
                     ProcessBuilder processBuilder = new ProcessBuilder();
 
-                    String executeWithArguments = execute.replace("%os%", oldSeverity.toString())
-                            .replace("%ns%", newSeverity.toString())
-                            .replace("%oc%", String.valueOf(oldAlarmCount))
-                            .replace("%nc%", String.valueOf(newAlarmCount));
+                    String executeWithArguments = defaultVariableNameExpansion.replace(execute);
+
+                    if (!quiet) {
+                        System.out.println("execute: executing '" + executeWithArguments + "'");
+                    }
 
                     Process process = (quiet ? processBuilder.command("sh", "-c", executeWithArguments).start()
                             : processBuilder.command("sh", "-c", executeWithArguments).inheritIO().start());
@@ -309,7 +431,7 @@ public class OnmsBlink {
                     int resultCode = process.waitFor();
 
                     if (!quiet && resultCode != 0) {
-                        System.out.println("Execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
+                        System.out.println("execute: execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
                     }
                 }
 

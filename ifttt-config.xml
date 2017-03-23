@@ -1,0 +1,65 @@
+<ifttt-config key="">
+
+    <trigger-set name="ON">
+        <trigger eventName="on" delay="3000">
+            <value1></value1>
+            <value2></value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="OFF">
+        <trigger eventName="off" delay="0">
+            <value1></value1>
+            <value2></value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="NORMAL">
+        <trigger eventName="color" delay="0">
+            <value1>#336600</value1>
+            <value2>0.40</value2>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="WARNING">
+        <trigger eventName="color" delay="0">
+            <value1>#FFCC00</value1>
+            <value2>0.50</value2>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="MINOR">
+        <trigger eventName="color" delay="0">
+            <value1>#FF9900</value1>
+            <value2>0.60</value2>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="MAJOR">
+        <trigger eventName="color" delay="0">
+            <value1>#CC3300</value1>
+            <value2>0.70</value2>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
+        </trigger>
+    </trigger-set>
+
+    <trigger-set name="CRITICAL">
+        <trigger eventName="color" delay="1000">
+            <value1>#FF0000</value1>
+            <value2>0.80</value2>
+            <value3>%os%,%ns%,%oc%,%nc%</value3>
+        </trigger>
+
+        <trigger eventName="blink" delay="0">
+            <value1>#FF0000</value1>
+            <value2>0.1</value2>
+            <value3></value3>
+        </trigger>
+    </trigger-set>
+
+</ifttt-config>
