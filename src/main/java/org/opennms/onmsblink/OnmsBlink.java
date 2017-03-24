@@ -4,18 +4,21 @@ import java.awt.Color;
 import java.io.File;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.JAXB;
 
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
-import org.opennms.netmgt.model.OnmsAlarm;
-import org.opennms.netmgt.model.OnmsSeverity;
 import org.opennms.onmsblink.ifttt.IfTttTrigger;
 import org.opennms.onmsblink.ifttt.config.IfTttConfig;
 import org.opennms.onmsblink.ifttt.config.Trigger;
 import org.opennms.onmsblink.ifttt.config.TriggerSet;
+import org.opennms.onmsblink.model.MinimalCategory;
+import org.opennms.onmsblink.model.MinimalNode;
+import org.opennms.onmsblink.model.MinimalAlarm;
+import org.opennms.onmsblink.model.MinimalSeverity;
 
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.WebResource;
@@ -43,10 +46,10 @@ public class OnmsBlink {
      * Default implementation
      */
     private static class DefaultVariableNameExpansion implements VariableNameExpansion {
-        OnmsSeverity oldSeverity, newSeverity;
+        MinimalSeverity oldSeverity, newSeverity;
         int oldAlarmCount, newAlarmCount;
 
-        public DefaultVariableNameExpansion(OnmsSeverity oldSeverity, OnmsSeverity newSeverity, int oldAlarmCount, int newAlarmCount) {
+        public DefaultVariableNameExpansion(MinimalSeverity oldSeverity, MinimalSeverity newSeverity, int oldAlarmCount, int newAlarmCount) {
             this.oldSeverity = oldSeverity;
             this.newSeverity = newSeverity;
             this.oldAlarmCount = oldAlarmCount;
@@ -83,7 +86,7 @@ public class OnmsBlink {
         /**
          * the maximum severity of the requested alarms
          */
-        private OnmsSeverity maxSeverity = OnmsSeverity.NORMAL;
+        private MinimalSeverity maxSeverity = MinimalSeverity.NORMAL;
         /**
          * constant glow
          */
@@ -91,16 +94,16 @@ public class OnmsBlink {
         /**
          * Map for mapping severities to colors
          */
-        private HashMap<OnmsSeverity, Color> colorMap = new HashMap<>();
+        private HashMap<MinimalSeverity, Color> colorMap = new HashMap<>();
 
         {
-            colorMap.put(OnmsSeverity.INDETERMINATE, new Color(0x336600));
-            colorMap.put(OnmsSeverity.CLEARED, new Color(0x336600));
-            colorMap.put(OnmsSeverity.NORMAL, new Color(0x336600));
-            colorMap.put(OnmsSeverity.WARNING, new Color(0xFFCC00));
-            colorMap.put(OnmsSeverity.MINOR, new Color(0xFF9900));
-            colorMap.put(OnmsSeverity.MAJOR, new Color(0xCC3300));
-            colorMap.put(OnmsSeverity.CRITICAL, new Color(0xFF0000));
+            colorMap.put(MinimalSeverity.INDETERMINATE, new Color(0x336600));
+            colorMap.put(MinimalSeverity.CLEARED, new Color(0x336600));
+            colorMap.put(MinimalSeverity.NORMAL, new Color(0x336600));
+            colorMap.put(MinimalSeverity.WARNING, new Color(0xFFCC00));
+            colorMap.put(MinimalSeverity.MINOR, new Color(0xFF9900));
+            colorMap.put(MinimalSeverity.MAJOR, new Color(0xCC3300));
+            colorMap.put(MinimalSeverity.CRITICAL, new Color(0xFF0000));
         }
 
 
@@ -117,11 +120,11 @@ public class OnmsBlink {
             }));
         }
 
-        public OnmsSeverity getMaxSeverity() {
+        public MinimalSeverity getMaxSeverity() {
             return maxSeverity;
         }
 
-        public void setMaxSeverity(final OnmsSeverity maxSeverity) {
+        public void setMaxSeverity(final MinimalSeverity maxSeverity) {
             this.maxSeverity = maxSeverity;
         }
 
@@ -136,7 +139,7 @@ public class OnmsBlink {
         @Override
         public void run() {
             while (true) {
-                if (maxSeverity.isLessThanOrEqual(OnmsSeverity.NORMAL) || isConstantGlow()) {
+                if (maxSeverity.isLessThanOrEqual(MinimalSeverity.NORMAL) || isConstantGlow()) {
                     if (blink1.fadeToRGB(0, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
                         blink1 = Blink1.open();
                     }
@@ -147,7 +150,7 @@ public class OnmsBlink {
                         e.printStackTrace();
                     }
                 } else {
-                    int speed = OnmsSeverity.CRITICAL.getId() - Math.max(maxSeverity.getId(), OnmsSeverity.NORMAL.getId());
+                    int speed = MinimalSeverity.CRITICAL.getId() - Math.max(maxSeverity.getId(), MinimalSeverity.NORMAL.getId());
 
                     if (blink1.fadeToRGB((1 + speed) * BLINK1_HIGH_DELAY, colorMap.get(maxSeverity)) == BLINK1_ERROR) {
                         blink1 = Blink1.open();
@@ -207,10 +210,18 @@ public class OnmsBlink {
     @Option(name = "--ifttt", usage = "trigger IFTTT events defined in ifttt-config.xml")
     public boolean ifttt = false;
 
+    @Option(required = false, name = "--category", usage = "category filter (Java regular-expression)")
+    private String categoryFilter = null;
+
     /**
      * IfTtt config
      */
-    IfTttConfig ifTttConfig = null;
+    private IfTttConfig ifTttConfig = null;
+
+    /**
+     * Node cache
+     */
+    private Map<Integer, Boolean> nodeCache;
 
     /**
      * Constructor for instantiating new objects of this class.
@@ -268,8 +279,7 @@ public class OnmsBlink {
         }
     }
 
-
-    private void fireIfTttTriggerSet(OnmsSeverity newSeverity, VariableNameExpansion variableNameExpansion) {
+    private void fireIfTttTriggerSet(MinimalSeverity newSeverity, VariableNameExpansion variableNameExpansion) {
         fireIfTttTriggerSet(newSeverity.getLabel(), variableNameExpansion);
     }
 
@@ -345,8 +355,8 @@ public class OnmsBlink {
          */
         if (test) {
             for (int i = 3; i < 8; i++) {
-                onmsBlinkWorker.setMaxSeverity(OnmsSeverity.get(i));
-                fireIfTttTriggerSet(OnmsSeverity.get(i), new DefaultVariableNameExpansion(OnmsSeverity.get(i - 1), OnmsSeverity.get(i), 0, 1));
+                onmsBlinkWorker.setMaxSeverity(MinimalSeverity.get(i));
+                fireIfTttTriggerSet(MinimalSeverity.get(i), new DefaultVariableNameExpansion(MinimalSeverity.get(i - 1), MinimalSeverity.get(i), 0, 1));
 
                 if (!quiet) {
                     System.out.println("test: setting LED to severity " + onmsBlinkWorker.getMaxSeverity().getLabel());
@@ -386,21 +396,77 @@ public class OnmsBlink {
          */
 
         int oldAlarmCount = 0;
-        OnmsSeverity oldSeverity = OnmsSeverity.INDETERMINATE;
+        MinimalSeverity oldSeverity = MinimalSeverity.INDETERMINATE;
 
         while (true) {
-            final WebResource webResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
+            final WebResource alarmsWebResource = apacheHttpClient.resource(baseUrl + "/rest/alarms?comparator=gt&severity=NORMAL&alarmAckTime=null&limit=0");
+
+            nodeCache = new HashMap<>();
 
             try {
-                final List<OnmsAlarm> onmsAlarms = webResource.header("Accept", "application/xml").get(new GenericType<List<OnmsAlarm>>() {
+                final List<MinimalAlarm> minimalAlarms = alarmsWebResource.header("Accept", "application/xml").get(new GenericType<List<MinimalAlarm>>() {
                 });
 
-                OnmsSeverity newSeverity = OnmsSeverity.NORMAL;
-                int newAlarmCount = onmsAlarms.size();
+                MinimalSeverity newSeverity = MinimalSeverity.NORMAL;
+                int newAlarmCount = 0;
 
-                for (final OnmsAlarm onmsAlarm : onmsAlarms) {
-                    if (onmsAlarm.getSeverity().isGreaterThan(newSeverity)) {
-                        newSeverity = onmsAlarm.getSeverity();
+                /**
+                 * iterate over all alarms
+                 */
+                for (final MinimalAlarm minimalAlarm : minimalAlarms) {
+                    boolean alarmMatches = true;
+                    /**
+                     * should we filter for categories?
+                     */
+                    if (categoryFilter != null) {
+
+                        alarmMatches = false;
+
+                        /**
+                         * check for existence of the nodeId
+                         */
+                        if (minimalAlarm.getNodeId() != null) {
+
+                            /**
+                             * check for already queried node in cache
+                             */
+                            if (nodeCache.containsKey(minimalAlarm.getNodeId())) {
+                                alarmMatches = nodeCache.get(minimalAlarm.getNodeId());
+                            } else {
+                                /**
+                                 * query for node resource
+                                 */
+                                final WebResource nodeWebResource = apacheHttpClient.resource(baseUrl + "/rest/nodes/" + minimalAlarm.getNodeId());
+                                final MinimalNode minimalNode = nodeWebResource.header("Accept", "application/xml").get(new GenericType<MinimalNode>() {
+                                });
+
+                                if (minimalNode != null) {
+                                    /**
+                                     * check for categories
+                                     */
+                                    if (minimalNode.getCategories() != null) {
+                                        nodeCache.put(minimalNode.getId(), false);
+                                        /**
+                                         * iterate over categories and check for match
+                                         */
+                                        for (MinimalCategory minimalCategory : minimalNode.getCategories()) {
+                                            if (minimalCategory.getName().matches(categoryFilter)) {
+                                                nodeCache.put(minimalNode.getId(), true);
+                                                alarmMatches = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (alarmMatches) {
+                        if (MinimalSeverity.valueOf(minimalAlarm.getSeverity()).isGreaterThan(newSeverity)) {
+                            newSeverity = MinimalSeverity.valueOf(minimalAlarm.getSeverity());
+                        }
+                        newAlarmCount++;
                     }
                 }
 

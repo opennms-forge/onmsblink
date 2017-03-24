@@ -14,23 +14,6 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-        <!-- OpenNMS Model for OnmsOutage -->
-        <dependency>
-            <groupId>org.opennms</groupId>
-            <artifactId>opennms-model</artifactId>
-            <version>19.0.1</version>
-            <type>jar</type>
-            <exclusions>
-                <exclusion>
-                    <artifactId>log4j</artifactId>
-                    <groupId>log4j</groupId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>slf4j-log4j12</artifactId>
-                    <groupId>org.slf4j</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
 
         <!-- Jersey for Rest and XML -->
         <dependency>
@@ -46,20 +29,6 @@
             <type>jar</type>
         </dependency>
 
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.24</version>
-            <type>jar</type>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.2.1</version>
-        </dependency>
-
         <dependency>
             <groupId>args4j</groupId>
             <artifactId>args4j</artifactId>
@@ -73,12 +42,10 @@
             <version>1.0</version>
             <scope>system</scope>
         </dependency>
-
     </dependencies>
 
     <build>
         <plugins>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -115,32 +82,4 @@
 
         </plugins>
     </build>
-
-    <repositories>
-        <!-- OpenNMS Repository to get the Model Classes -->
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <id>opennms-snapshots</id>
-            <name>OpenNMS Snapshot Maven Repository</name>
-            <url>http://maven.opennms.org/content/groups/opennms.org-snapshot</url>
-        </repository>
-
-        <!-- OpenNMS Repository to get the Model Classes -->
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <id>opennms-release</id>
-            <name>OpenNMS Releases Maven Repository</name>
-            <url>http://maven.opennms.org/content/groups/opennms.org-release</url>
-        </repository>
-    </repositories>
 </project>
