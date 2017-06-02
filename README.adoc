@@ -14,6 +14,12 @@ In order to compile or execute this tool you need to build the libraries `blink1
 
 == Get the source
 
+.Install libusb-1.0-0-dev
+[source, bash]
+----
+apt install libusb-1.0-0-dev -y
+----
+
 .Get the _OnmsBlink_ source code and change the directory
 [source, bash]
 ----
