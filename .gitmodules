@@ -1,3 +1,6 @@
 [submodule "blink1"]
 	path = blink1
 	url = https://github.com/todbot/blink1.git
+[submodule "blink1-java"]
+	path = blink1-java
+	url = https://github.com/todbot/blink1-java.git

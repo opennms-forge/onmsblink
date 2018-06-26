@@ -31,9 +31,7 @@ git submodule update
 .Build the blink1 SDK dependency libraries
 [source, bash]
 ----
-cd blink1
-mkdir libraries
-cd java
+cd blink1-java
 make jar
 ----
 
