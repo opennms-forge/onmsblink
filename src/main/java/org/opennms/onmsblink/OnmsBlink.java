@@ -476,29 +476,29 @@ public class OnmsBlink {
 
                 if (!newSeverity.equals(oldSeverity) || newAlarmCount != oldAlarmCount) {
                     fireIfTttTriggerSet(newSeverity, defaultVariableNameExpansion);
+
+                    if (execute != null) {
+                        ProcessBuilder processBuilder = new ProcessBuilder();
+
+                        String executeWithArguments = defaultVariableNameExpansion.replace(execute);
+
+                        if (!quiet) {
+                            System.out.println("execute: executing '" + executeWithArguments + "'");
+                        }
+
+                        Process process = (quiet ? processBuilder.command("sh", "-c", executeWithArguments).start()
+                                : processBuilder.command("sh", "-c", executeWithArguments).inheritIO().start());
+
+                        int resultCode = process.waitFor();
+
+                        if (!quiet && resultCode != 0) {
+                            System.out.println("execute: execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
+                        }
+                    }
                 }
 
                 if (!quiet) {
                     System.out.println("opennms: received " + newAlarmCount + " unacknowledged alarm(s) with severity > Normal, maximum severity is " + onmsBlinkWorker.getMaxSeverity().getLabel());
-                }
-
-                if (execute != null) {
-                    ProcessBuilder processBuilder = new ProcessBuilder();
-
-                    String executeWithArguments = defaultVariableNameExpansion.replace(execute);
-
-                    if (!quiet) {
-                        System.out.println("execute: executing '" + executeWithArguments + "'");
-                    }
-
-                    Process process = (quiet ? processBuilder.command("sh", "-c", executeWithArguments).start()
-                            : processBuilder.command("sh", "-c", executeWithArguments).inheritIO().start());
-
-                    int resultCode = process.waitFor();
-
-                    if (!quiet && resultCode != 0) {
-                        System.out.println("execute: execution of '" + executeWithArguments + "' returned non-null value " + resultCode);
-                    }
                 }
 
                 oldSeverity = newSeverity;
