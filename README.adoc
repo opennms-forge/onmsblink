@@ -41,6 +41,12 @@ cd blink1-java
 make jar
 ----
 
+If you are building on Mac and have problems like `fatal error: 'jni.h' file not found`, try to set the include paths by invoking:
+[source, bash]
+----
+export CFLAGS="-I `/usr/libexec/java_home`/include -I `/usr/libexec/java_home`/include/darwin"
+----
+
 == Building OnmsBlink
 
 You can build _OnmsBlink_ by invoking `mvn package`:
