@@ -2,10 +2,20 @@ package org.opennms.onmsblink;
 
 import java.awt.Color;
 import java.io.File;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.xml.bind.JAXB;
 
 import org.kohsuke.args4j.CmdLineException;
@@ -25,6 +35,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.client.apache.ApacheHttpClient;
 import com.sun.jersey.client.apache.config.DefaultApacheHttpClientConfig;
+import com.sun.jersey.client.urlconnection.HTTPSProperties;
 
 import thingm.blink1.Blink1;
 
@@ -213,6 +224,9 @@ public class OnmsBlink {
     @Option(required = false, name = "--category", usage = "category filter (Java regular-expression)")
     private String categoryFilter = null;
 
+    @Option(name = "--ignore-certificates", usage = "do not validate any SSL certificates")
+    public boolean ignoreCertificates = false;
+
     /**
      * IfTtt config
      */
@@ -389,6 +403,11 @@ public class OnmsBlink {
         defaultApacheHttpClientConfig.getFeatures().put(JSONConfiguration.FEATURE_POJO_MAPPING, Boolean.TRUE);
         defaultApacheHttpClientConfig.getProperties().put(defaultApacheHttpClientConfig.PROPERTY_PREEMPTIVE_AUTHENTICATION, Boolean.TRUE);
         defaultApacheHttpClientConfig.getState().setCredentials(null, null, -1, username, password);
+
+        if (ignoreCertificates) {
+            ignoreCertificates(defaultApacheHttpClientConfig);
+        }
+        
         final ApacheHttpClient apacheHttpClient = ApacheHttpClient.create(defaultApacheHttpClientConfig);
 
         /**
@@ -512,6 +531,46 @@ public class OnmsBlink {
             } catch (InterruptedException e) {
                 e.printStackTrace(System.err);
             }
+        }
+    }
+
+    private void ignoreCertificates(final DefaultApacheHttpClientConfig defaultApacheHttpClientConfig) {
+        final TrustManager[ ] certs = new TrustManager[ ] {
+                new X509TrustManager() {
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                    }
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+                    }
+                }
+        };
+
+        SSLContext ctx = null;
+        try {
+            ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, certs, new SecureRandom());
+            SSLContext.setDefault(ctx);
+        } catch (java.security.GeneralSecurityException ex) {
+        }
+        HttpsURLConnection.setDefaultSSLSocketFactory(ctx.getSocketFactory());
+
+        try {
+            defaultApacheHttpClientConfig.getProperties().put(HTTPSProperties.PROPERTY_HTTPS_PROPERTIES, new HTTPSProperties(
+                    new HostnameVerifier() {
+                        @Override
+                        public boolean verify(String hostname, SSLSession session) {
+                            return true;
+                        }
+                    },
+                    ctx
+            ));
+        } catch(Exception e) {
+            e.printStackTrace();
         }
     }
 }
