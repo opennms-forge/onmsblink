@@ -1,7 +1,7 @@
 
 = OnmsBlink
 
-A small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_ or trigger _IFTTT_ applets.
+A nice small tool to indicate OpenNMS alarms on a _blink(1) mk2 USB LED_ or trigger _IFTTT_ applets.
 
 In order to compile or execute this tool you need to build the libraries `blink1.jar` and `libBlink1.jnilib` in the `blink1` directory.
 
